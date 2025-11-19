@@ -259,8 +259,7 @@ function ConcentrationContent() {
                         <strong className="text-primary">
                           위에 표시된 타겟 자극
                         </strong>
-                        이 나타나면 <strong>스페이스바</strong> 또는{" "}
-                        <strong>화면 클릭</strong>으로 반응하세요
+                        이 나타나면 <strong>스페이스바</strong>로 반응하세요
                       </li>
                       <li>다른 자극에는 반응하지 마세요</li>
                       <li>최대한 빠르고 정확하게 반응하세요</li>
@@ -326,8 +325,7 @@ function ConcentrationContent() {
 
               <div className="mt-8 text-center text-text-secondary">
                 <p className="text-lg">
-                  <strong>스페이스바</strong> 또는 <strong>화면 클릭</strong>
-                  으로 반응
+                  <strong>스페이스바</strong>로 반응
                 </p>
               </div>
             </div>
