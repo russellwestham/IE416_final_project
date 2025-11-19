@@ -1,0 +1,171 @@
+const { google } = require("googleapis");
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../.env.local") });
+
+async function generateCounterbalancing() {
+  // Google Sheets API 인증
+  const auth = new google.auth.GoogleAuth({
+    keyFile: path.join(__dirname, "../credential.json"),
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+
+  const sheets = google.sheets({ version: "v4", auth });
+  const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+
+  if (!spreadsheetId) {
+    throw new Error("GOOGLE_SHEETS_ID 환경 변수가 설정되지 않았습니다.");
+  }
+
+  console.log("📊 카운터밸런싱 데이터 생성 중...");
+  console.log(`Spreadsheet ID: ${spreadsheetId}`);
+
+  // 참가자 데이터 생성
+  const participants = [];
+
+  // 헤더 행
+  const header = [
+    "participant_id",
+    "name",
+    "student_id",
+    "phone_number",
+    "group",
+    "condition_type",
+    "aut_type",
+    "timestamp",
+    "researcher_name",
+  ];
+  participants.push(header);
+
+  // 70명 참가자 데이터 생성
+  for (let i = 1; i <= 70; i++) {
+    const participantId = `P${i.toString().padStart(3, "0")}`;
+
+    // 그룹 배정: 홀수는 수학, 짝수는 글쓰기
+    const group = i % 2 === 1 ? "수학" : "글쓰기";
+
+    // Condition Type: 1~4 순환
+    const conditionType = ((i - 1) % 4) + 1;
+
+    // AUT Type: 1~6 순환
+    const autType = ((i - 1) % 6) + 1;
+
+    participants.push([
+      participantId, // A: participant_id
+      null, // B: name (실험 시 채움)
+      null, // C: student_id (실험 시 채움)
+      null, // D: phone_number (실험 시 채움)
+      group, // E: group
+      conditionType, // F: condition_type
+      autType, // G: aut_type
+      null, // H: timestamp (실험 시 채움)
+      null, // I: researcher_name (실험 시 채움)
+    ]);
+  }
+
+  // 모든 시트 초기화
+  console.log("\n🗑️  기존 데이터 삭제 중...");
+  
+  // 1. Participants 시트 초기화
+  console.log("📋 Participants 시트 초기화...");
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range: "participants!A:Z",
+  });
+  
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: "participants!A1",
+    valueInputOption: "RAW",
+    resource: {
+      values: participants,
+    },
+  });
+
+  // 2. Tasks 시트 초기화
+  console.log("� Tasks 시트 초기화...");
+  const tasksHeader = [
+    "participant_id",
+    "task_number",
+    "task_type",
+    "problem_version",
+    "llm_condition",
+    "start_time",
+    "submit_time",
+    "duration_ms",
+    "answer",
+    "word_count",
+    "timestamp",
+  ];
+  
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range: "tasks!A:Z",
+  });
+  
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: "tasks!A1",
+    valueInputOption: "RAW",
+    resource: {
+      values: [tasksHeader],
+    },
+  });
+
+  // 3. AUT 시트 초기화
+  console.log("🎨 AUT 시트 초기화...");
+  const autHeader = [
+    "participant_id",
+    "measurement_point",
+    "round",
+    "object",
+    "responses",
+    "timestamp",
+  ];
+  
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range: "aut!A:Z",
+  });
+  
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: "aut!A1",
+    valueInputOption: "RAW",
+    resource: {
+      values: [autHeader],
+    },
+  });
+
+  console.log("✅ 모든 시트 초기화 및 70명분 카운터밸런싱 데이터 생성 완료");
+  console.log("\n=== 배정 결과 ===");
+  console.log("- 수학 그룹: 35명");
+  console.log("- 글쓰기 그룹: 35명");
+  console.log("- Condition Type 1: 18명");
+  console.log("- Condition Type 2: 17명");
+  console.log("- Condition Type 3: 18명");
+  console.log("- Condition Type 4: 17명");
+  console.log("- AUT Type 1: 12명");
+  console.log("- AUT Type 2: 12명");
+  console.log("- AUT Type 3: 12명");
+  console.log("- AUT Type 4: 11명");
+  console.log("- AUT Type 5: 12명");
+  console.log("- AUT Type 6: 11명");
+}
+
+// 스크립트 실행
+generateCounterbalancing()
+  .then(() => {
+    console.log("\n✅ 카운터밸런싱 데이터 생성 완료!");
+    console.log("\n💡 Google Sheets를 확인하세요:");
+    console.log(
+      `   https://docs.google.com/spreadsheets/d/${process.env.GOOGLE_SHEETS_ID}/edit`
+    );
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error("❌ Error:", error.message);
+    if (error.code) {
+      console.error(`Error Code: ${error.code}`);
+    }
+    process.exit(1);
+  });

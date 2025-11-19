@@ -1,0 +1,934 @@
+# 기술 명세서 (Technical Specifications)
+
+> **이 문서는**: 데이터 구조, API, 환경 설정, 카운터밸런싱 상세를 정의합니다.  
+> **대상**: 백엔드 개발자, 데이터 엔지니어, 인프라 담당자
+
+---
+
+## 📚 관련 문서
+
+| 문서                                                 | 역할          | 언제 보나요?                |
+| ---------------------------------------------------- | ------------- | --------------------------- |
+| **technical-specs.md** (현재)                        | 기술 명세     | 데이터 구조, API, 환경 설정 |
+| [`product-requirements.md`](product-requirements.md) | 제품 요구사항 | 사용자 플로우, 기능 요구사항 |
+| [`design-system.md`](design-system.md)               | 디자인 시스템 | UI/UX 구현, 스타일 적용     |
+| [`pending-decisions.md`](pending-decisions.md)       | 미결정 사항   | 팀 논의 필요 항목           |
+
+**💡 작업별 문서 조합**:
+
+- **데이터베이스 설계**: `technical-specs.md` (현재)
+- **API 개발**: `technical-specs.md` (현재) + `product-requirements.md`
+- **환경 구축**: `technical-specs.md` (현재)
+- **카운터밸런싱 구현**: `technical-specs.md` (현재)
+
+---
+
+## 목차
+
+1. [데이터 구조 (Google Sheets)](#-데이터-구조-google-sheets)
+2. [카운터밸런싱 상세](#-카운터밸런싱-상세)
+3. [프로젝트 구조](#-프로젝트-구조)
+4. [API 명세](#-api-명세)
+5. [환경 설정](#-환경-설정)
+6. [에러 처리](#-에러-처리)
+
+---
+
+## 📊 데이터 구조 (Google Sheets)
+
+### ⚠️ 데이터 초기화 방식
+
+**실험 전 준비**:
+
+1. `scripts/generate-counterbalancing.js` 실행
+2. Google Sheets `participants` 시트에 P001~P070 행 자동 생성
+3. 각 행의 `condition_type`, `aut_type`, `group`은 채워짐
+4. `name`, `student_id`, `email`, `timestamp`는 NULL 상태
+
+**실험 중**:
+
+- 가장 작은 미사용 ID 자동 할당
+- 해당 행의 NULL 컬럼들만 업데이트
+- 카운터밸런싱 정보는 변경되지 않음
+
+---
+
+### Sheet 1: participants (참가자 기본 정보)
+
+#### 초기 상태 (실험 전)
+
+| participant_id | name | student_id | email | group  | condition_type | aut_type | timestamp |
+| -------------- | ---- | ---------- | ----- | ------ | -------------- | -------- | --------- |
+| P001           | NULL | NULL       | NULL  | 수학   | 1              | 1        | NULL      |
+| P002           | NULL | NULL       | NULL  | 글쓰기 | 2              | 2        | NULL      |
+| P003           | NULL | NULL       | NULL  | 수학   | 3              | 3        | NULL      |
+| ...            | ...  | ...        | ...   | ...    | ...            | ...      | ...       |
+| P070           | NULL | NULL       | NULL  | 글쓰기 | 2              | 4        | NULL      |
+
+#### 실험 후 (P001 참가자가 완료한 경우)
+
+| participant_id | name   | student_id | email            | group  | condition_type | aut_type | timestamp           |
+| -------------- | ------ | ---------- | ---------------- | ------ | -------------- | -------- | ------------------- |
+| P001           | 홍길동 | 20240001   | hong@kaist.ac.kr | 수학   | 1              | 1        | 2025-11-13 14:30:00 |
+| P002           | NULL   | NULL       | NULL             | 글쓰기 | 2              | 2        | NULL                |
+| ...            | ...    | ...        | ...              | ...    | ...            | ...      | ...                 |
+
+#### 컬럼 상세
+
+| 컬럼명           | 데이터 타입 | 초기값       | 업데이트 시점 | 제약조건                      | 설명                |
+| ---------------- | ----------- | ------------ | ------------- | ----------------------------- | ------------------- |
+| `participant_id` | STRING      | ✅ 사전 생성 | -             | PRIMARY KEY, UNIQUE, NOT NULL | 고유 ID (P001~P070) |
+| `name`           | STRING      | NULL         | 실험 시       | NOT NULL (실험 후)            | 참가자 이름         |
+| `student_id`     | STRING      | NULL         | 실험 시       | NOT NULL (실험 후)            | 학번 (8자리)        |
+| `email`          | STRING      | NULL         | 실험 시       | NOT NULL, EMAIL FORMAT        | 이메일 주소         |
+| `group`          | STRING      | ✅ 사전 생성 | -             | ENUM("수학", "글쓰기")        | 배정된 과제 그룹    |
+| `condition_type` | INTEGER     | ✅ 사전 생성 | -             | RANGE(1, 4)                   | 조건 순서 타입      |
+| `aut_type`       | INTEGER     | ✅ 사전 생성 | -             | RANGE(1, 6)                   | AUT 물건 순서 타입  |
+| `timestamp`      | DATETIME    | NULL         | 실험 시       | ISO 8601 FORMAT               | 실험 시작 시간      |
+
+**인덱스**:
+
+- PRIMARY KEY: `participant_id`
+- INDEX: `name` (NULL 체크용)
+
+---
+
+### Sheet 2: aut_data (창의력 데이터)
+
+#### 스키마
+
+| 컬럼명              | 데이터 타입 | 제약조건                   | 설명                        | 예시                    |
+| ------------------- | ----------- | -------------------------- | --------------------------- | ----------------------- |
+| `participant_id`    | STRING      | FOREIGN KEY, NOT NULL      | 참가자 ID                   | P001                    |
+| `measurement_point` | STRING      | ENUM("Pre", "Mid", "Post") | 측정 시점                   | Pre                     |
+| `object`            | STRING      | NOT NULL                   | 제시된 물건                 | 벽돌                    |
+| `ideas`             | TEXT        | NOT NULL                   | 아이디어 전체 (줄바꿈 구분) | "문진\n무기\n책상 고정" |
+| `idea_count`        | INTEGER     | NOT NULL, >= 0             | 아이디어 개수               | 15                      |
+| `timestamp`         | DATETIME    | NOT NULL, ISO 8601         | 완료 시간                   | 2025-11-13T14:35:00Z    |
+
+**데이터 예시**:
+
+```
+P001, Pre, 벽돌, "문진으로 사용\n무기로 사용\n예술 작품 재료\n...", 12, 2025-11-13T14:35:00Z
+P001, Mid, 클립, "서류 정리\n장신구 만들기\n...", 8, 2025-11-13T14:42:00Z
+P001, Post, 종이컵, "화분으로 사용\n스피커 만들기\n...", 10, 2025-11-13T14:55:00Z
+```
+
+**참고**: 참가자 1명당 3개 행 (Pre/Mid/Post)
+
+---
+
+### Sheet 3: measurement_data (참을성/집중력 데이터)
+
+#### 스키마
+
+| 컬럼명              | 데이터 타입 | 제약조건                               | 설명      | 예시                 |
+| ------------------- | ----------- | -------------------------------------- | --------- | -------------------- |
+| `participant_id`    | STRING      | FOREIGN KEY, NOT NULL                  | 참가자 ID | P001                 |
+| `measurement_point` | STRING      | ENUM("Pre", "Mid", "Post")             | 측정 시점 | Pre                  |
+| `measurement_type`  | STRING      | ENUM("SART", "Unsolvable", "Skeleton") | 측정 유형 | Skeleton             |
+| `metric_name`       | STRING      | NOT NULL                               | 지표 이름 | persistence_time     |
+| `value`             | FLOAT       | NOT NULL                               | 측정값    | 180.5                |
+| `timestamp`         | DATETIME    | NOT NULL, ISO 8601                     | 완료 시간 | 2025-11-13T14:40:00Z |
+
+**현재 상태 (스켈레톤)**:
+
+```
+P001, Pre, Skeleton, dummy_value, 0, 2025-11-13T14:37:00Z
+P001, Mid, Skeleton, dummy_value, 0, 2025-11-13T14:44:00Z
+P001, Post, Skeleton, dummy_value, 0, 2025-11-13T14:57:00Z
+```
+
+**추후 변경 (측정 방법 확정 후)**:
+
+- `measurement_type`: "SART" 또는 "Unsolvable"
+- `metric_name`: 실제 지표 (예: "commission_errors", "persistence_time")
+- `value`: 실제 측정값
+
+**참고**: 참가자 1명당 3개 행 (Pre/Mid/Post)
+
+---
+
+### Sheet 4: task_data (과제 수행 데이터)
+
+#### 스키마
+
+| 컬럼명             | 데이터 타입 | 제약조건              | 설명           | 예시                  |
+| ------------------ | ----------- | --------------------- | -------------- | --------------------- |
+| `participant_id`   | STRING      | FOREIGN KEY, NOT NULL | 참가자 ID      | P001                  |
+| `task_number`      | INTEGER     | ENUM(1, 2)            | 과제 번호      | 1                     |
+| `problem_version`  | STRING      | ENUM("A", "B")        | 문제 버전      | A                     |
+| `llm_condition`    | STRING      | ENUM("Yes", "No")     | LLM 조건       | No                    |
+| `answer`           | TEXT        | NOT NULL              | 답안 내용      | "답변 텍스트..."      |
+| `correct_answer`   | TEXT        | NULL (실험 후 채움)   | 정답/모범 답안 | "정답 또는 모범 답안" |
+| `is_correct`       | BOOLEAN     | NULL (실험 후 채움)   | 정답 여부      | TRUE / FALSE / NULL   |
+| `score`            | FLOAT       | NULL, RANGE(0, 100)   | 부분 점수      | 85.5                  |
+| `evaluation_notes` | TEXT        | NULL                  | 평가 메모      | "논리 전개 우수"      |
+| `time_spent`       | INTEGER     | NOT NULL, >= 0        | 소요 시간(초)  | 280                   |
+| `timestamp`        | DATETIME    | NOT NULL, ISO 8601    | 완료 시간      | 2025-11-13T14:50:00Z  |
+
+**평가 컬럼 설명**:
+
+- `correct_answer`: 연구자가 사전에 정의한 정답 또는 모범 답안
+- `is_correct`: 연구자가 답안 검토 후 정답 여부 판정 (TRUE/FALSE/NULL)
+- `score`: 부분 점수가 필요한 경우 0~100 점수 부여 (선택사항)
+- `evaluation_notes`: 평가 시 특이사항이나 메모 기록 (선택사항)
+
+**데이터 예시**:
+
+```
+P001, 1, A, No, "답변 내용...", NULL, NULL, NULL, NULL, 280, 2025-11-13T14:50:00Z
+P001, 2, B, Yes, "답변 내용...", NULL, NULL, NULL, NULL, 295, 2025-11-13T14:53:00Z
+```
+
+**참고**:
+
+- 참가자 1명당 2개 행 (Task 1/2)
+- 평가 컬럼은 실험 후 연구자가 수동으로 채워넣음
+
+---
+
+### 데이터 저장 흐름
+
+#### 실험 전 (1회만 실행)
+
+```
+0. scripts/generate-counterbalancing.js 실행
+   └─ Sheet 1 (participants)에 P001~P070 생성
+   └─ 각 행에 condition_type, aut_type, group 채워넣기
+   └─ name, student_id, email, timestamp는 NULL로 남김
+```
+
+#### 실험 중 (참가자 1명당)
+
+```
+1. 참가자 정보 입력 완료
+   └─ Sheet 1 (participants): 1개 행 UPDATE
+      - 가장 작은 미사용 ID 찾기
+      - name, student_id, email, timestamp 업데이트
+      - condition_type, aut_type, group 조회
+
+2. AUT 수행 완료 (Pre)
+   └─ Sheet 2 (aut_data): 1개 행 INSERT
+      - measurement_point = "Pre"
+
+3. 참을성/집중력 수행 완료 (Pre)
+   └─ Sheet 3 (measurement_data): 1개 행 INSERT
+      - measurement_point = "Pre"
+      - ⚠️ 현재는 더미 데이터 (value: 0)
+
+4. 과제 1 수행 완료
+   └─ Sheet 4 (task_data): 1개 행 INSERT
+      - task_number = 1
+
+... (반복)
+
+최종: 참가자 1명당
+- Sheet 1: 1개 행 업데이트
+- Sheet 2: 3개 행 추가 (Pre/Mid/Post)
+- Sheet 3: 3개 행 추가 (Pre/Mid/Post)
+- Sheet 4: 2개 행 추가 (Task 1/2)
+```
+
+---
+
+## 🔄 카운터밸런싱 상세
+
+### 목적
+
+- **순서 효과(order effect) 제거**: 과제 순서, LLM 조건 순서가 결과에 영향을 주지 않도록
+- **균등 분배**: 모든 조건에 동일한 수의 참가자 배정
+- **AUT 물건 순서 균등 분배**: 학습 효과 방지
+
+### Condition Type (조건 타입): 1~4
+
+| condition_type | LLM 순서    | 문제 순서 | Task 1             | Task 2             |
+| -------------- | ----------- | --------- | ------------------ | ------------------ |
+| **1**          | NoLLM → LLM | A → B     | Problem A / No LLM | Problem B / LLM    |
+| **2**          | NoLLM → LLM | B → A     | Problem B / No LLM | Problem A / LLM    |
+| **3**          | LLM → NoLLM | A → B     | Problem A / LLM    | Problem B / No LLM |
+| **4**          | LLM → NoLLM | B → A     | Problem B / LLM    | Problem A / No LLM |
+
+**배정 로직**:
+
+```javascript
+const conditionType = ((participantId - 1) % 4) + 1;
+```
+
+**결과** (70명 참가자):
+
+- Type 1: 18명
+- Type 2: 17명
+- Type 3: 18명
+- Type 4: 17명
+
+---
+
+### AUT Type (AUT 타입): 1~6
+
+| aut_type | Pre    | Mid    | Post   |
+| -------- | ------ | ------ | ------ |
+| **1**    | 벽돌   | 클립   | 종이컵 |
+| **2**    | 벽돌   | 종이컵 | 클립   |
+| **3**    | 클립   | 벽돌   | 종이컵 |
+| **4**    | 클립   | 종이컵 | 벽돌   |
+| **5**    | 종이컵 | 벽돌   | 클립   |
+| **6**    | 종이컵 | 클립   | 벽돌   |
+
+**배정 로직**:
+
+```javascript
+const autType = ((participantId - 1) % 6) + 1;
+```
+
+**결과** (70명 참가자):
+
+- Type 1~6: 각 11~12명
+
+---
+
+### 사전 생성 스크립트
+
+**파일**: `scripts/generate-counterbalancing.js`
+
+```javascript
+const { google } = require("googleapis");
+
+async function generateCounterbalancing() {
+  // Google Sheets API 인증
+  const auth = new google.auth.GoogleAuth({
+    keyFile: "./credentials.json",
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+
+  const sheets = google.sheets({ version: "v4", auth });
+  const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
+
+  // 참가자 데이터 생성
+  const participants = [];
+  const header = [
+    "participant_id",
+    "name",
+    "student_id",
+    "email",
+    "group",
+    "condition_type",
+    "aut_type",
+    "timestamp",
+  ];
+  participants.push(header);
+
+  for (let i = 1; i <= 70; i++) {
+    const participantId = `P${i.toString().padStart(3, "0")}`;
+
+    // 그룹 배정: 홀수는 수학, 짝수는 글쓰기
+    const group = i % 2 === 1 ? "수학" : "글쓰기";
+
+    // Condition Type: 1~4 순환
+    const conditionType = ((i - 1) % 4) + 1;
+
+    // AUT Type: 1~6 순환
+    const autType = ((i - 1) % 6) + 1;
+
+    participants.push([
+      participantId,
+      null, // name
+      null, // student_id
+      null, // email
+      group,
+      conditionType,
+      autType,
+      null, // timestamp
+    ]);
+  }
+
+  // Google Sheets에 저장
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: "participants!A1",
+    valueInputOption: "RAW",
+    resource: {
+      values: participants,
+    },
+  });
+
+  console.log("✅ 70명분 카운터밸런싱 데이터 생성 완료");
+  console.log("- 수학 그룹: 35명");
+  console.log("- 글쓰기 그룹: 35명");
+  console.log("- Condition Type 1~4: 각 17~18명");
+  console.log("- AUT Type 1~6: 각 11~12명");
+}
+
+// 실행
+generateCounterbalancing()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("Error:", error);
+    process.exit(1);
+  });
+```
+
+**실행 방법**:
+
+```bash
+node scripts/generate-counterbalancing.js
+```
+
+---
+
+### 카운터밸런싱 매핑 함수
+
+**파일**: `lib/counterbalancing.js`
+
+```javascript
+/**
+ * Condition Type에 따른 Task 구성 반환
+ */
+export function getTaskConfig(conditionType) {
+  const configs = {
+    1: {
+      task1: { problem: "A", llm: "No" },
+      task2: { problem: "B", llm: "Yes" },
+    },
+    2: {
+      task1: { problem: "B", llm: "No" },
+      task2: { problem: "A", llm: "Yes" },
+    },
+    3: {
+      task1: { problem: "A", llm: "Yes" },
+      task2: { problem: "B", llm: "No" },
+    },
+    4: {
+      task1: { problem: "B", llm: "Yes" },
+      task2: { problem: "A", llm: "No" },
+    },
+  };
+
+  return configs[conditionType];
+}
+
+/**
+ * AUT Type에 따른 물건 순서 반환
+ */
+export function getAUTObjects(autType) {
+  const objects = {
+    1: { pre: "벽돌", mid: "클립", post: "종이컵" },
+    2: { pre: "벽돌", mid: "종이컵", post: "클립" },
+    3: { pre: "클립", mid: "벽돌", post: "종이컵" },
+    4: { pre: "클립", mid: "종이컵", post: "벽돌" },
+    5: { pre: "종이컵", mid: "벽돌", post: "클립" },
+    6: { pre: "종이컵", mid: "클립", post: "벽돌" },
+  };
+
+  return objects[autType];
+}
+
+/**
+ * 측정 시점에 따른 AUT 물건 반환
+ */
+export function getAUTObject(autType, point) {
+  const objects = getAUTObjects(autType);
+  return objects[point]; // 예: point='pre' → '벽돌'
+}
+```
+
+**사용 예시**:
+
+```javascript
+import { getTaskConfig, getAUTObject } from "@/lib/counterbalancing";
+
+// Condition Type 1 참가자
+const taskConfig = getTaskConfig(1);
+console.log(taskConfig.task1); // { problem: 'A', llm: 'No' }
+
+// AUT Type 3 참가자의 Pre 물건
+const object = getAUTObject(3, "pre");
+console.log(object); // '클립'
+```
+
+## 🔌 API 명세
+
+### 1. Participant ID 자동 할당
+
+**Endpoint**: `POST /api/assign-participant-id`
+
+**요청**:
+
+```json
+{} // Body 없음
+```
+
+**응답**:
+
+```json
+{
+  "success": true,
+  "participant_id": "P003",
+  "group": "수학",
+  "condition_type": 3,
+  "aut_type": 3
+}
+```
+
+**에러**:
+
+```json
+{
+  "success": false,
+  "error": "사용 가능한 참가자 ID가 없습니다."
+}
+```
+
+---
+
+### 2. 참가자 정보 조회
+
+**Endpoint**: `GET /api/get-participant?id=P003`
+
+**요청**: Query Parameter `id`
+
+**응답**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "participant_id": "P003",
+    "name": null,
+    "student_id": null,
+    "email": null,
+    "group": "수학",
+    "condition_type": 3,
+    "aut_type": 3,
+    "timestamp": null
+  }
+}
+```
+
+---
+
+### 3. 참가자 정보 업데이트
+
+**Endpoint**: `PATCH /api/update-participant`
+
+**요청**:
+
+```json
+{
+  "participant_id": "P003",
+  "name": "홍길동",
+  "student_id": "20240001",
+  "email": "hong@kaist.ac.kr"
+}
+```
+
+**응답**:
+
+```json
+{
+  "success": true,
+  "message": "참가자 정보가 업데이트되었습니다."
+}
+```
+
+---
+
+### 4. AUT 데이터 저장
+
+**Endpoint**: `POST /api/save-aut`
+
+**요청**:
+
+```json
+{
+  "participant_id": "P003",
+  "measurement_point": "Pre",
+  "object": "클립",
+  "ideas": "서류 정리\n장신구 만들기\n...",
+  "idea_count": 8
+}
+```
+
+**응답**:
+
+```json
+{
+  "success": true,
+  "message": "AUT 데이터가 저장되었습니다."
+}
+```
+
+---
+
+### 5. 측정 데이터 저장 (참을성/집중력)
+
+**Endpoint**: `POST /api/save-measurement`
+
+**요청**:
+
+```json
+{
+  "participant_id": "P003",
+  "measurement_point": "Pre",
+  "measurement_type": "Skeleton",
+  "metric_name": "dummy_value",
+  "value": 0
+}
+```
+
+**응답**:
+
+```json
+{
+  "success": true,
+  "message": "측정 데이터가 저장되었습니다."
+}
+```
+
+---
+
+### 6. 과제 데이터 저장
+
+**Endpoint**: `POST /api/save-task`
+
+**요청**:
+
+```json
+{
+  "participant_id": "P003",
+  "task_number": 1,
+  "problem_version": "A",
+  "llm_condition": "Yes",
+  "answer": "답변 내용...",
+  "time_spent": 280
+}
+```
+
+**응답**:
+
+```json
+{
+  "success": true,
+  "message": "과제 데이터가 저장되었습니다."
+}
+```
+
+---
+
+## ⚙️ 환경 설정
+
+### 1. 환경 변수
+
+**파일**: `.env.local`
+
+```bash
+# Google Sheets API
+GOOGLE_SHEETS_ID=your_spreadsheet_id_here
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# App Settings
+NEXT_PUBLIC_TIMER_TASK_SECONDS=300   # 5분 (과제 제한 시간)
+NEXT_PUBLIC_TIMER_AUT_SECONDS=120    # 2분 (AUT 제한 시간)
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Environment
+NODE_ENV=development
+```
+
+**보안**:
+
+- `.env.local`은 Git에 포함하지 않음 (`.gitignore`에 추가)
+- Google Service Account 키는 팀 내부에서만 공유
+
+---
+
+### 2. Google Sheets API 설정
+
+#### 2.1. Google Cloud Console 설정
+
+1. https://console.cloud.google.com/ 접속
+2. 새 프로젝트 생성 (예: "IE416-Experiment")
+3. **API 및 서비스** → **라이브러리** → "Google Sheets API" 검색 및 활성화
+
+#### 2.2. 서비스 계정 생성
+
+1. **IAM 및 관리자** → **서비스 계정**
+2. "서비스 계정 만들기" 클릭
+3. 이름: "experiment-app-service"
+4. 역할: "편집자" 또는 "Sheets Editor"
+5. JSON 키 다운로드 (credentials.json)
+
+#### 2.3. Google Sheets 문서 준비
+
+1. Google Sheets에서 새 스프레드시트 생성
+2. 시트 4개 생성:
+   - `participants`
+   - `aut_data`
+   - `measurement_data`
+   - `task_data`
+3. 서비스 계정 이메일에 **편집 권한** 부여 (공유 버튼)
+4. 스프레드시트 ID 복사 (URL에서: `docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit`)
+
+#### 2.4. 환경 변수 설정
+
+`.env.local`에 추가:
+
+```bash
+GOOGLE_SHEETS_ID={SPREADSHEET_ID}
+GOOGLE_SERVICE_ACCOUNT_EMAIL={service-account}@{project-id}.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="{credentials.json의 private_key}"
+```
+
+---
+
+### 3. 프로젝트 설치 및 실행
+
+```bash
+# 1. Next.js 15 프로젝트 생성
+npx create-next-app@15 experiment-app
+# 선택 옵션:
+# - Use App Router? Yes ✅
+# - Use TypeScript? No (또는 Yes)
+# - Use Tailwind CSS? Yes ✅
+
+# 2. 프로젝트 디렉토리 이동
+cd experiment-app
+
+# 3. 의존성 설치
+npm install googleapis
+
+# 4. 환경 변수 파일 생성
+cp .env.example .env.local
+# .env.local 파일 편집하여 실제 값 입력
+
+# 5. 카운터밸런싱 데이터 생성 (최초 1회)
+node scripts/generate-counterbalancing.js
+
+# 6. 개발 서버 실행
+npm run dev
+# → http://localhost:3000
+```
+
+---
+
+### 4. Tailwind CSS 설정
+
+**파일**: `tailwind.config.js`
+
+```javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./contexts/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          DEFAULT: "#2563EB",
+          hover: "#1E40AF",
+        },
+        success: "#16A34A",
+        warning: "#F59E0B",
+        danger: "#DC2626",
+        neutral: {
+          DEFAULT: "#111827",
+          light: "#4B5563",
+        },
+        surface: "#F9FAFB",
+        border: "#D1D5DB",
+      },
+      fontFamily: {
+        sans: ["Pretendard", "Inter", "system-ui", "sans-serif"],
+      },
+    },
+  },
+  plugins: [],
+};
+```
+
+---
+
+## 🚨 에러 처리
+
+### 에러 복구 전략
+
+```
+에러 발생 시:
+1. 현재 진행 중인 데이터를 로컬 스토리지에 백업
+2. 에러 내용 로그: console.error() + 서버 로그
+3. 사용자에게 에러 메시지 표시 (디자인 시스템 준수)
+4. "다시 시도" 또는 "처음부터 시작" 옵션 제공
+5. 에러 발생 시 participant_id 재할당 (새로운 ID)
+6. 연구자가 나중에 에러 데이터 검토
+```
+
+### 일반적인 에러 상황
+
+#### 1. Google Sheets API 오류
+
+**원인**:
+
+- 네트워크 끊김
+- 인증 실패 (Service Account 권한 문제)
+- API Quota 초과
+
+**처리**:
+
+```javascript
+try {
+  await saveToGoogleSheets(data);
+} catch (error) {
+  console.error("Google Sheets Error:", error);
+
+  // 로컬 백업
+  localStorage.setItem("backup_data", JSON.stringify(data));
+
+  // 에러 메시지
+  alert("데이터 저장에 실패했습니다. 네트워크를 확인해주세요.");
+
+  // 재시도 옵션
+  if (confirm("다시 시도하시겠습니까?")) {
+    return await saveToGoogleSheets(data);
+  }
+}
+```
+
+#### 2. Participant ID 고갈
+
+**원인**: 모든 ID (P001~P070)가 사용됨
+
+**처리**:
+
+```javascript
+const assignParticipantId = async () => {
+  const response = await fetch("/api/assign-participant-id", {
+    method: "POST",
+  });
+
+  const data = await response.json();
+
+  if (!data.success) {
+    alert("사용 가능한 참가자 슬롯이 없습니다. 연구자에게 문의하세요.");
+    // 실험 진행 불가
+    return null;
+  }
+
+  return data.participant_id;
+};
+```
+
+#### 3. 세션 데이터 손실
+
+**원인**: 브라우저 종료, 새로고침
+
+**처리**:
+
+```javascript
+// ExperimentContext.js
+useEffect(() => {
+  // 세션 복원
+  const savedData = sessionStorage.getItem("experiment_data");
+  if (savedData) {
+    setExperimentData(JSON.parse(savedData));
+  }
+}, []);
+
+useEffect(() => {
+  // 자동 저장
+  sessionStorage.setItem("experiment_data", JSON.stringify(experimentData));
+}, [experimentData]);
+```
+
+#### 4. 타이머 오류
+
+**원인**: 백그라운드 탭에서 타이머 정확도 저하
+
+**처리**:
+
+```javascript
+useEffect(() => {
+  const startTime = Date.now();
+
+  const interval = setInterval(() => {
+    const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+    const timeLeft = TOTAL_TIME - elapsedTime;
+
+    if (timeLeft <= 0) {
+      clearInterval(interval);
+      handleTimeout();
+    } else {
+      setTimeLeft(timeLeft);
+    }
+  }, 100); // 100ms마다 체크 (정확도 향상)
+
+  return () => clearInterval(interval);
+}, []);
+```
+
+### 에러 로깅
+
+**파일**: `lib/errorLogger.js`
+
+```javascript
+export function logError(context, error, data = {}) {
+  const errorLog = {
+    timestamp: new Date().toISOString(),
+    context,
+    error: error.message,
+    stack: error.stack,
+    data,
+    userAgent: navigator.userAgent,
+    url: window.location.href,
+  };
+
+  console.error("Error Log:", errorLog);
+
+  // 서버에 전송 (선택사항)
+  fetch("/api/log-error", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(errorLog),
+  }).catch((err) => console.error("Failed to log error:", err));
+
+  // 로컬 저장
+  const logs = JSON.parse(localStorage.getItem("error_logs") || "[]");
+  logs.push(errorLog);
+  localStorage.setItem("error_logs", JSON.stringify(logs));
+}
+```
+
+---
+
+## 📦 배포
+
+### Vercel 배포 (권장)
+
+```bash
+# 1. Vercel CLI 설치
+npm install -g vercel
+
+# 2. 로그인
+vercel login
+
+# 3. 배포
+vercel
+
+# 4. 환경 변수 설정 (Vercel Dashboard)
+# → Settings → Environment Variables
+# → .env.local의 내용 복사
+```
+
+### 환경 변수 보안
+
+- Production 환경에서는 Google Service Account JSON 파일 대신 환경 변수 사용
+- `GOOGLE_PRIVATE_KEY`는 이스케이프된 문자열로 저장
+
+---
+
+**Last Updated**: 2025-11-13  
+**Version**: 2.0  
+**Related**: [`product-requirements.md`](product-requirements.md), [`design-system.md`](design-system.md)

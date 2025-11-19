@@ -1,0 +1,133 @@
+# Copilot Instructions for IE416 Final Project
+
+## � 목차 (Table of Contents)
+
+1. [프로젝트 개요](#-프로젝트-개요)
+2. [기술 스택](#️-기술-스택)
+3. [문서 구조 및 네비게이션](#-문서-구조-및-네비게이션)
+4. [개발 단계](#-개발-단계)
+5. [작업 가이드](#-작업-가이드)
+6. [핵심 규칙](#-핵심-규칙)
+
+---
+
+## �📋 프로젝트 개요
+
+**프로젝트명**: "Draining Patience or Fueling Creativity? The LLM Effect on KAIST students"
+
+**연구 목적**: LLM 사용이 KAIST 학생들의 인지 기능(창의력, 참을성, 집중력)에 미치는 영향 측정
+
+**실험 설계**: 2(LLM 조건) x 2(과제 분야) Mixed Design
+- Within-subjects: LLM 사용/미사용
+- Between-subjects: 수학/글쓰기
+- 참가자: 50명 (각 분야 25명)
+- 실험 시간: 약 30분
+
+**측정 도구**:
+- 창의력: AUT (Alternative Uses Test)
+- 참을성/집중력: SART 또는 Unsolvable Task (팀 결정 예정)
+
+---
+
+## 🛠️ 기술 스택
+
+| 구분 | 기술 | 버전 | 비고 |
+|------|------|------|------|
+| **Framework** | Next.js | **15.0+** | App Router 사용 |
+| **Language** | JavaScript | ES6+ | TypeScript 선택사항 |
+| **Database** | Google Sheets API | v4 | 실험 데이터 저장 |
+| **LLM** | 브라우저 직접 사용 | - | API 연동 없음 |
+| **Styling** | Tailwind CSS | 3.4+ | 권장 (선택사항) |
+
+**선택 이유**:
+- **Next.js 15 App Router**: Server Components, 파일 기반 라우팅, Route Handlers
+- **Google Sheets**: 간단한 설정, 팀 협업, 50명x9행=450행으로 충분
+- **브라우저 LLM**: API 키 불필요, 비용 제로, 자연스러운 사용 환경
+
+---
+
+## 📂 문서 구조 및 네비게이션
+
+### 문서 역할 분담
+
+| 문서 | 역할 | 주요 내용 |
+|------|------|----------|
+| **copilot-instruction.md** (이 파일) | 🧭 네비게이션 허브 | 프로젝트 개요, 기술 스택, 문서 안내, 개발 단계 |
+| [`experiment-design.md`](docs/experiment-design.md) | 🔬 실험 설계 | Mixed Design 배경, 측정 도구, Core Barriers, 데이터 분석 |
+| [`implementation-guide.md`](docs/implementation-guide.md) | 💻 구현 가이드 | 유저 플로우, 카운터밸런싱, UI/UX, 데이터 구조, 프로젝트 구조, 환경 설정 |
+| [`pending-decisions.md`](docs/pending-decisions.md) | ⚠️ 미결정 추적 | 팀 결정 필요 항목 (측정 도구, 문제 설계, 파일럿 테스트 등) |
+
+### 작업별 참고 문서 빠른 링크
+
+| 작업 | 참고 문서 |
+|------|----------|
+| **실험 이론 이해** | [`experiment-design.md`](docs/experiment-design.md) |
+| **코딩 시작** | [`implementation-guide.md`](docs/implementation-guide.md) → 프로젝트 구조, 환경 설정 |
+| **화면 구현** | [`implementation-guide.md`](docs/implementation-guide.md) → 유저 플로우, UI/UX |
+| **데이터 저장** | [`implementation-guide.md`](docs/implementation-guide.md) → 데이터 구조, Google Sheets |
+| **기능 구현 전 확인** | [`pending-decisions.md`](docs/pending-decisions.md) → 해당 항목이 결정되었는지 확인 |
+
+---
+
+## 🚀 개발 단계
+
+### Phase 1: MVP (핵심 플로우)
+1. [ ] Next.js 15 프로젝트 생성 (App Router)
+2. [ ] 화면 라우팅 구조 생성 (재사용 컴포넌트 활용)
+3. [ ] 카운터밸런싱 로직 구현
+4. [ ] Google Sheets API 연동 및 데이터 저장
+5. [ ] AUT 측정 페이지 (재사용 컴포넌트)
+6. [ ] 과제 수행 페이지 + 타이머
+
+**완료 조건**: 전체 플로우 진행 가능, 데이터 저장 확인
+
+### Phase 2: 완성 & 테스트
+1. [ ] 참을성/집중력 측정 구현
+2. [ ] 실제 문제 추가 (수학/글쓰기 A/B)
+3. [ ] UI/UX 완성
+4. [ ] 파일럿 테스트 (3~5명)
+5. [ ] 버그 수정 및 배포
+
+**완료 조건**: 50명 데이터 수집 가능
+
+> � **상세 정보**: [`implementation-guide.md`](docs/implementation-guide.md) → 프로젝트 구조, 환경 설정
+
+---
+
+## 📝 Copilot을 위한 노트
+
+### 이 프로젝트 작업 시:
+1. ✅ **항상 이 파일을 먼저 읽고** 전체 맥락 파악
+2. ✅ **세부 사항은 해당 문서 참고**:
+   - 실험 설계 질문 → `experiment-design.md`
+   - 구현 방법 질문 → `implementation-guide.md`
+   - 결정 안 된 항목 → `pending-decisions.md`
+3. ✅ **21단계 유저 플로우 준수**
+4. ✅ **카운터밸런싱 로직 정확히 구현** (과제 + AUT 물건 모두)
+5. ✅ **데이터는 Google Sheets 4개 시트에 저장**
+6. ✅ **LLM은 브라우저로 직접 사용** (별도 API 연동 없음)
+7. ✅ **타이머는 시각적 피드백 포함** (색상 변화, Hard Limit)
+8. ✅ **Next.js App Router 사용** (Pages Router 아님)
+9. ✅ **각 단계 완료 후 테스트**
+
+### 금지 사항:
+- ❌ `pending-decisions.md`의 미결정 사항을 임의로 결정하지 말 것 (팀 결정 필요)
+- ❌ 실험 설계 변경하지 말 것 (Mixed Design 유지)
+- ❌ 데이터 구조 임의로 수정하지 말 것 (Google Sheets 4개 시트 고정)
+
+---
+
+##  참고 자료
+
+### 프로젝트 문서
+- 프로젝트 가이드라인: `Final Project Guideline for IE416_2025F (1).pdf`
+- 팀 제안서: `Proposal_G4.pdf`
+
+### 외부 리소스
+- Next.js App Router: https://nextjs.org/docs/app
+- Google Sheets API: https://developers.google.com/sheets/api
+
+---
+
+**Last Updated**: 2025-11-13  
+**Version**: 2.1 (App Router, AUT counterbalancing, removed Gemini API)
