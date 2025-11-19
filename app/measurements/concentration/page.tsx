@@ -152,7 +152,7 @@ function ConcentrationContent() {
     setResponses([]);
   };
 
-  const handleComplete = async () => {
+  const handleComplete = useCallback(async () => {
     if (!test) return;
 
     // 통계 계산
@@ -205,7 +205,7 @@ function ConcentrationContent() {
       console.error("Error saving CPT data:", error);
       alert("데이터 저장에 실패했습니다.");
     }
-  };
+  }, [test, responses, participantId, measurementPoint, router]);
 
   if (!participantId || !test) {
     return (

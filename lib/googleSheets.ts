@@ -42,7 +42,7 @@ export async function readSheet(sheetName: string, range: string) {
  * @param sheetName - 시트 이름
  * @param values - 추가할 데이터 (2D 배열)
  */
-export async function appendToSheet(sheetName: string, values: any[][]) {
+export async function appendToSheet(sheetName: string, values: (string | number)[][]) {
   const sheets = getGoogleSheetsClient();
 
   try {
@@ -71,7 +71,7 @@ export async function appendToSheet(sheetName: string, values: any[][]) {
 export async function updateSheet(
   sheetName: string,
   range: string,
-  values: any[][]
+  values: (string | number)[][]
 ) {
   const sheets = getGoogleSheetsClient();
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getTaskConfig } from "@/lib/counterbalancing";
 
@@ -96,11 +96,17 @@ const PROBLEMS = {
   },
 };
 
+interface TaskConfig {
+  group: string;
+  problem: string;
+  llmCondition: string;
+}
+
 function TaskPerformContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [participantId, setParticipantId] = useState("");
-  const [taskConfig, setTaskConfig] = useState<any>(null);
+  const [taskConfig, setTaskConfig] = useState<TaskConfig | null>(null);
   const [answer, setAnswer] = useState("");
   const [charCount, setCharCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(300); // 5분 = 300초
@@ -109,7 +115,7 @@ function TaskPerformContent() {
 
   const taskNumber = parseInt(searchParams.get("task") || "1") as 1 | 2;
 
-  const handleSubmit = async (autoSubmit = false) => {
+  const handleSubmit = useCallback(async (autoSubmit = false) => {
     if (isSubmitting) return; // 중복 제출 방지
     if (!startTime || !participantId || !taskConfig) return;
 
@@ -164,7 +170,7 @@ function TaskPerformContent() {
         alert("데이터 저장에 실패했습니다.");
       }
     }
-  };
+  }, [isSubmitting, startTime, participantId, taskConfig, answer, taskNumber, router]);
 
   useEffect(() => {
     const id = localStorage.getItem("participantId");
@@ -219,18 +225,12 @@ function TaskPerformContent() {
     const timer = setInterval(updateTimer, 100);
 
     return () => clearInterval(timer);
-  }, [startTime]); // 절대 시간 기반이므로 startTime만 의존성으로
+  }, [startTime, handleSubmit]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const getTimerColor = () => {
-    if (timeLeft > 180) return "text-success";
-    if (timeLeft > 60) return "text-warning";
-    return "text-danger";
   };
 
   if (!taskConfig) {

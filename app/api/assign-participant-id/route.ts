@@ -4,7 +4,7 @@ import {
   updateParticipant,
 } from "@/lib/googleSheets";
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     // 가장 작은 미사용 Participant ID 찾기
     const participantId = await getNextAvailableParticipantId();

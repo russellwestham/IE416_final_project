@@ -7,12 +7,10 @@ export default function CompletionPage() {
   const router = useRouter();
   const [participantId, setParticipantId] = useState("");
   const [participantName, setParticipantName] = useState("");
-  const [participantInfo, setParticipantInfo] = useState<any>(null);
 
   useEffect(() => {
     const id = localStorage.getItem("participantId");
     const name = localStorage.getItem("participantName");
-    const info = localStorage.getItem("participantInfo");
 
     if (!id) {
       router.push("/");
@@ -21,9 +19,6 @@ export default function CompletionPage() {
 
     setParticipantId(id);
     setParticipantName(name || "");
-    if (info) {
-      setParticipantInfo(JSON.parse(info));
-    }
 
     // 실험 완료 상태 업데이트
     updateCompletionStatus(id);

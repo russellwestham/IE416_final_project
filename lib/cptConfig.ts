@@ -62,14 +62,6 @@ export const CPT_TEST_3: CPTTest = {
 };
 
 /**
- * 시드 기반 랜덤 함수 (LCG - Linear Congruential Generator)
- */
-function seededRandom(seed: number): number {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
-
-/**
  * 배열을 시드 기반으로 섞기 (Fisher-Yates shuffle)
  */
 function seededShuffle<T>(array: T[], seed: number): T[] {

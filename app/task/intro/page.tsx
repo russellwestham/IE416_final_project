@@ -4,11 +4,16 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getTaskConfig } from "@/lib/counterbalancing";
 
+interface TaskConfig {
+  group: string;
+  problem: string;
+  llmCondition: string;
+}
+
 function TaskIntroContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [participantId, setParticipantId] = useState("");
-  const [taskConfig, setTaskConfig] = useState<any>(null);
+  const [taskConfig, setTaskConfig] = useState<TaskConfig | null>(null);
 
   const taskNumber = parseInt(searchParams.get("task") || "1") as 1 | 2;
 
@@ -18,7 +23,6 @@ function TaskIntroContent() {
       router.push("/");
       return;
     }
-    setParticipantId(id);
 
     // 카운터밸런싱 정보 가져오기
     const config = getTaskConfig(id, taskNumber);

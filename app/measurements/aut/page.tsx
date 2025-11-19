@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // AUT Type에 따른 물건 매핑
@@ -19,7 +19,6 @@ function AUTContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [participantId, setParticipantId] = useState("");
-  const [autType, setAutType] = useState<number | null>(null);
   const [objectName, setObjectName] = useState("");
   const [response, setResponse] = useState("");
   const [timeLeft, setTimeLeft] = useState(120); // 2분 = 120초
@@ -30,7 +29,7 @@ function AUTContent() {
   const point = searchParams.get("point") || "pre"; // pre, mid, post
   const round = searchParams.get("round") || "1"; // 1, 2, 3
 
-  const handleSubmit = async (autoSubmit = false) => {
+  const handleSubmit = useCallback(async (autoSubmit = false) => {
     if (isSubmitting) return; // 중복 제출 방지
     if (!startTime || !participantId || !objectName) return;
 
@@ -67,7 +66,7 @@ function AUTContent() {
         alert("데이터 저장에 실패했습니다.");
       }
     }
-  };
+  }, [isSubmitting, startTime, participantId, objectName, response, round, point, router]);
 
   useEffect(() => {
     const id = localStorage.getItem("participantId");
@@ -80,7 +79,6 @@ function AUTContent() {
     // Participant ID에서 AUT Type 계산 (P001 → 1, P002 → 2, ...)
     const participantNum = parseInt(id.replace("P", ""));
     const calculatedAutType = ((participantNum - 1) % 6) + 1;
-    setAutType(calculatedAutType);
 
     // AUT Type과 측정 시점에 따라 물건 결정
     const objects = AUT_OBJECTS[calculatedAutType];
@@ -114,7 +112,7 @@ function AUTContent() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [startTime]); // response를 의존성에서 제거하여 항상 최신 값 참조
+  }, [startTime, handleSubmit]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
