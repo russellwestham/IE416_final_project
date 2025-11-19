@@ -177,9 +177,7 @@ function AUTContent() {
             <li className="font-semibold text-primary">
               ⚠️ 중요: 한 줄에 하나의 용도만 작성해주세요 (Enter로 줄바꿈)
             </li>
-            <li>
-              띄어쓰기로 여러 용도를 나열하면 1개로 인식됩니다
-            </li>
+            <li>띄어쓰기로 여러 용도를 나열하면 1개로 인식됩니다</li>
             <li>일반적인 용도보다 창의적인 용도를 생각해보세요</li>
             <li>제한 시간: 2분</li>
           </ul>
@@ -199,9 +197,7 @@ function AUTContent() {
             <span className="font-semibold text-primary">
               {response.split("\n").filter((line) => line.trim()).length}개
             </span>
-            <span className="text-xs ml-2">
-              (줄바꿈으로 구분됩니다)
-            </span>
+            <span className="text-xs ml-2">(줄바꿈으로 구분됩니다)</span>
           </p>
         </div>
 
