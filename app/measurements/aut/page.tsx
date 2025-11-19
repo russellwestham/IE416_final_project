@@ -29,44 +29,56 @@ function AUTContent() {
   const point = searchParams.get("point") || "pre"; // pre, mid, post
   const round = searchParams.get("round") || "1"; // 1, 2, 3
 
-  const handleSubmit = useCallback(async (autoSubmit = false) => {
-    if (isSubmitting) return; // 중복 제출 방지
-    if (!startTime || !participantId || !objectName) return;
+  const handleSubmit = useCallback(
+    async (autoSubmit = false) => {
+      if (isSubmitting) return; // 중복 제출 방지
+      if (!startTime || !participantId || !objectName) return;
 
-    setIsSubmitting(true);
-    const responseTime = Date.now() - startTime;
+      setIsSubmitting(true);
+      const responseTime = Date.now() - startTime;
 
-    try {
-      await fetch("/api/save-aut", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          participantId,
-          autRound: parseInt(round),
-          point,
-          objectName,
-          response: response.trim(), // 현재 입력된 텍스트 그대로 저장
-          responseTime,
-          timestamp: new Date().toISOString(),
-        }),
-      });
+      try {
+        await fetch("/api/save-aut", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            participantId,
+            autRound: parseInt(round),
+            point,
+            objectName,
+            response: response.trim(), // 현재 입력된 텍스트 그대로 저장
+            responseTime,
+            timestamp: new Date().toISOString(),
+          }),
+        });
 
-      // 다음 단계로 이동
-      if (point === "pre" && round === "1") {
-        router.push("/measurements/concentration?point=pre");
-      } else if (point === "mid" && round === "1") {
-        router.push("/measurements/concentration?point=mid");
-      } else if (point === "post" && round === "1") {
-        router.push("/measurements/concentration?point=post");
+        // 다음 단계로 이동
+        if (point === "pre" && round === "1") {
+          router.push("/measurements/concentration?point=pre");
+        } else if (point === "mid" && round === "1") {
+          router.push("/measurements/concentration?point=mid");
+        } else if (point === "post" && round === "1") {
+          router.push("/measurements/concentration?point=post");
+        }
+      } catch (error) {
+        console.error("Error saving AUT data:", error);
+        setIsSubmitting(false);
+        if (!autoSubmit) {
+          alert("데이터 저장에 실패했습니다.");
+        }
       }
-    } catch (error) {
-      console.error("Error saving AUT data:", error);
-      setIsSubmitting(false);
-      if (!autoSubmit) {
-        alert("데이터 저장에 실패했습니다.");
-      }
-    }
-  }, [isSubmitting, startTime, participantId, objectName, response, round, point, router]);
+    },
+    [
+      isSubmitting,
+      startTime,
+      participantId,
+      objectName,
+      response,
+      round,
+      point,
+      router,
+    ]
+  );
 
   useEffect(() => {
     const id = localStorage.getItem("participantId");

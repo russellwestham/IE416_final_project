@@ -115,62 +115,73 @@ function TaskPerformContent() {
 
   const taskNumber = parseInt(searchParams.get("task") || "1") as 1 | 2;
 
-  const handleSubmit = useCallback(async (autoSubmit = false) => {
-    if (isSubmitting) return; // 중복 제출 방지
-    if (!startTime || !participantId || !taskConfig) return;
+  const handleSubmit = useCallback(
+    async (autoSubmit = false) => {
+      if (isSubmitting) return; // 중복 제출 방지
+      if (!startTime || !participantId || !taskConfig) return;
 
-    // Soft limit: Warn if over 250 chars for writing problems
-    if (
-      taskConfig.group === "글쓰기" &&
-      answer.replace(/\s/g, "").length > 250 &&
-      !autoSubmit
-    ) {
+      // Soft limit: Warn if over 250 chars for writing problems
       if (
-        !window.confirm("250자 내외로 작성해 주세요. 계속 제출하시겠습니까?")
+        taskConfig.group === "글쓰기" &&
+        answer.replace(/\s/g, "").length > 250 &&
+        !autoSubmit
       ) {
-        return;
+        if (
+          !window.confirm("250자 내외로 작성해 주세요. 계속 제출하시겠습니까?")
+        ) {
+          return;
+        }
       }
-    }
 
-    setIsSubmitting(true);
-    const duration = Date.now() - startTime;
-    const wordCount = answer
-      .trim()
-      .split(/\s+/)
-      .filter((w) => w).length;
+      setIsSubmitting(true);
+      const duration = Date.now() - startTime;
+      const wordCount = answer
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w).length;
 
-    try {
-      await fetch("/api/save-task", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          participantId,
-          taskNumber,
-          taskType: taskConfig.group,
-          problemVersion: taskConfig.problem,
-          llmCondition: taskConfig.llmCondition,
-          startTime: new Date(startTime).toISOString(),
-          submitTime: new Date().toISOString(),
-          duration,
-          answer: answer.trim(),
-          wordCount,
-        }),
-      });
+      try {
+        await fetch("/api/save-task", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            participantId,
+            taskNumber,
+            taskType: taskConfig.group,
+            problemVersion: taskConfig.problem,
+            llmCondition: taskConfig.llmCondition,
+            startTime: new Date(startTime).toISOString(),
+            submitTime: new Date().toISOString(),
+            duration,
+            answer: answer.trim(),
+            wordCount,
+          }),
+        });
 
-      // 다음 단계로 이동
-      if (taskNumber === 1) {
-        router.push("/measurements/aut?point=mid&round=1");
-      } else {
-        router.push("/measurements/aut?point=post&round=1");
+        // 다음 단계로 이동
+        if (taskNumber === 1) {
+          router.push("/measurements/aut?point=mid&round=1");
+        } else {
+          router.push("/measurements/aut?point=post&round=1");
+        }
+      } catch (error) {
+        console.error("Error saving task data:", error);
+        setIsSubmitting(false);
+        if (!autoSubmit) {
+          alert("데이터 저장에 실패했습니다.");
+        }
       }
-    } catch (error) {
-      console.error("Error saving task data:", error);
-      setIsSubmitting(false);
-      if (!autoSubmit) {
-        alert("데이터 저장에 실패했습니다.");
-      }
-    }
-  }, [isSubmitting, startTime, participantId, taskConfig, answer, taskNumber, router]);
+    },
+    [
+      isSubmitting,
+      startTime,
+      participantId,
+      taskConfig,
+      answer,
+      taskNumber,
+      router,
+    ]
+  );
 
   useEffect(() => {
     const id = localStorage.getItem("participantId");
@@ -210,9 +221,9 @@ function TaskPerformContent() {
     const updateTimer = () => {
       const now = Date.now();
       const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
-      
+
       setTimeLeft(remaining);
-      
+
       if (remaining <= 0) {
         handleSubmit(true); // 자동 제출
       }
@@ -272,25 +283,38 @@ function TaskPerformContent() {
           {/* 문제 */}
           <div className="mb-6 p-6 bg-surface rounded-lg">
             <p className="text-lg whitespace-pre-line">{problem.content}</p>
-            
+
             {/* M1 문제일 때 데이터 파일 다운로드 버튼 표시 */}
-            {taskConfig.group === "수학" && 
-             (PROBLEMS.수학.A.content.includes("KAIST 학생 일주일 지출 모델링") || 
-              PROBLEMS.수학.B.content.includes("KAIST 학생 일주일 지출 모델링")) && 
-             problem.content.includes("KAIST 학생 일주일 지출 모델링") && (
-              <div className="mt-4 pt-4 border-t border-border">
-                <a
-                  href="/data/kaist_spending.csv"
-                  download="kaist_spending.csv"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                  데이터 파일 다운로드 (kaist_spending.csv)
-                </a>
-              </div>
-            )}
+            {taskConfig.group === "수학" &&
+              (PROBLEMS.수학.A.content.includes(
+                "KAIST 학생 일주일 지출 모델링"
+              ) ||
+                PROBLEMS.수학.B.content.includes(
+                  "KAIST 학생 일주일 지출 모델링"
+                )) &&
+              problem.content.includes("KAIST 학생 일주일 지출 모델링") && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <a
+                    href="/data/kaist_spending.csv"
+                    download="kaist_spending.csv"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    데이터 파일 다운로드 (kaist_spending.csv)
+                  </a>
+                </div>
+              )}
           </div>
 
           {/* 답안 입력 */}
