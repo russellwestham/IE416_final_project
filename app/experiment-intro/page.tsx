@@ -52,6 +52,7 @@ export default function ExperimentIntro() {
                 <ul className="list-disc list-inside ml-6 mt-1">
                   <li>창의력 테스트 (AUT): 2분</li>
                   <li>집중력 테스트 (CPT): 1분</li>
+                  <li>주관적 상태 설문조사 (5개 질문): 1분</li>
                 </ul>
               </li>
               <li>
@@ -63,6 +64,7 @@ export default function ExperimentIntro() {
                 <ul className="list-disc list-inside ml-6 mt-1">
                   <li>창의력 테스트 (AUT): 2분</li>
                   <li>집중력 테스트 (CPT): 1분</li>
+                  <li>주관적 상태 설문조사 (5개 질문): 1분</li>
                 </ul>
               </li>
             </ol>

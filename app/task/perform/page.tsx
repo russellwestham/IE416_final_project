@@ -4,64 +4,34 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getTaskConfig } from "@/lib/counterbalancing";
 
-// 수학 문제 풀 (M1~M4)
+// 수학 문제 풀 (M1, M2만 사용)
 const MATH_PROBLEMS = [
   {
     id: "M1",
     title: "수학 문제",
     description: "다음 수학 문제를 풀어주세요.",
-    content: `KAIST 학생 일주일 지출 모델링
-1. 기준 주간 지출 합계를 구하시오.
-2. Cafeteria 항목에 +5% 인상이 적용될 때 주간 총 지출은?
-3. Card 결제에는 2% 캐시백, AppPay에는 1% 수수료가 적용될 때 주간 총지출은?
-4. 위 네 금액을 budget_won(=90,000)과 비교하여, 예산 내/초과를 표기하고, 가장 효과적인 절감 포인트 1가지를 한 줄로 제안하시오.`,
+    content: `KAIST 기숙사 실거주 인원 모델링을 하고싶다.
+기숙사 목록은 본인이 아는 범위 내에서 캠퍼스 내(문지, 화암 제외)만 포함하고, 방 타입: 1인실, 2인실, 3인실으로 가정하고 추정하시오.
+단, 운영 변수 및 가정 스스로 정의 5개 이상 반드시 포함.
+(ex. r_k: type K의 가용률, x_k: type k의 점유율)`,
   },
   {
     id: "M2",
     title: "수학 문제",
     description: "다음 수학 문제를 풀어주세요.",
-    content: `KAIST 기숙사 실거주 인원 모델링
-기숙사 목록은 본인이 아는 범위 내에서 캠퍼스 내(문지, 화암 제외)만 포함.
-방 타입: 1인실, 2인실, 3인실
-운영 변수 및 가정 스스로 정의 5개 이상 (ex. r_k: type K의 가용률, x_k: type k의 점유율)`,
-  },
-  {
-    id: "M3",
-    title: "수학 문제",
-    description: "다음 수학 문제를 풀어주세요.",
-    content: `2023년 7월 육군 입대한 병사가 한 푼도 안쓴채 월급을 모았다면, 전역할 때 모으는 돈은 얼마일까?`,
-  },
-  {
-    id: "M4",
-    title: "수학 문제",
-    description: "다음 수학 문제를 풀어주세요.",
-    content: `오늘은 2023년 10월 21일 토요일
-은평구에 사는 민규가 편의점에서 음식을 쓰레기봉투 10L 크기를 3개 구매했다.
-이후 같은 건물 2층 CGV에서 오후 8시, A열 좌석 2D 티켓 1장을 현금으로 예매해 영화를 찾다면, 민규가 쓴 돈의 총액은 얼마일까?`,
+    content: `KAIST 학부생 19학번 기준 '정규 4년 내 졸업 비율 (8학기 이내 졸업자)'을 모델링 후 추정하시오.
+단, 운영 변수 및 가정 스스로 정의 5개 이상 반드시 포함.
+(ex. 남여비율, 전문연구요원 비율, 복수전공 비율)`,
   },
 ];
 
-// 랜덤으로 2개의 수학 문제 선택 (시드 기반으로 일관성 유지)
-function selectMathProblems(
-  participantId: string
-): [(typeof MATH_PROBLEMS)[0], (typeof MATH_PROBLEMS)[0]] {
-  // 참가자 ID를 기반으로 시드 생성 (P001 -> 1, P002 -> 2, ...)
-  const seed = parseInt(participantId.replace("P", "")) || 1;
-
-  // 시드 기반 랜덤 함수 (동일한 참가자는 항상 동일한 문제 조합)
-  const seededRandom = (s: number) => {
-    const x = Math.sin(s) * 10000;
-    return x - Math.floor(x);
-  };
-
-  // 4개 중 2개 선택
-  const indices = [0, 1, 2, 3];
-  const random1 = Math.floor(seededRandom(seed) * 4);
-  const firstIndex = indices.splice(random1, 1)[0];
-  const random2 = Math.floor(seededRandom(seed + 100) * 3);
-  const secondIndex = indices[random2];
-
-  return [MATH_PROBLEMS[firstIndex], MATH_PROBLEMS[secondIndex]];
+// 2개의 수학 문제를 순서대로 반환 (A에는 M1, B에는 M2)
+function selectMathProblems(): [
+  (typeof MATH_PROBLEMS)[0],
+  (typeof MATH_PROBLEMS)[0]
+] {
+  // A에는 항상 M1, B에는 항상 M2
+  return [MATH_PROBLEMS[0], MATH_PROBLEMS[1]];
 }
 
 // 문제 데이터
@@ -70,26 +40,30 @@ const PROBLEMS = {
     A: {
       title: "수학 문제",
       description: "다음 수학 문제를 풀어주세요.",
-      content: "", // 동적으로 채워짐
+      content: "", // 동적으로 채워짐 (M1 or M3)
+      grading:
+        "채점기준:\n- 변수 + 가정 정의의 사실성 (20점)\n- 논리성 (30점)\n- 타당성 일관성 (30점)\n- 표현 형식 (20점)",
     },
     B: {
       title: "수학 문제",
       description: "다음 수학 문제를 풀어주세요.",
-      content: "", // 동적으로 채워짐
+      content: "", // 동적으로 채워짐 (M2 or M3)
+      grading:
+        "채점기준:\n- 변수 + 가정 정의의 사실성 (20점)\n- 논리성 (30점)\n- 타당성 일관성 (30점)\n- 표현 형식 (20점)",
     },
   },
   글쓰기: {
     A: {
-      title: "글쓰기 문제",
+      title: "글쓰기 문제 (W1)",
       description: "다음 주제에 대해 250자 내외로 논리적으로 서술하세요.",
       content:
-        "학과설명회 요약본에 넣을 본인 전공 소개 1문단을 250자 내외로 작성하시오.\n\n반드시 포함:\n1. 사용하는 건물 및 주 연구 분야\n2. 대표 과목명 및 테크트리 요약\n3. 학과 복지 및 장점",
+        "W1: 학과설명회 요약본에 넣을 본인 전공 소개 1문단을 250자 내외로 작성하시오.\n\n반드시 포함:\n1. 사용하는 건물 및 주 연구 분야\n2. 대표 과목명 및 테크트리 요약\n3. 학과 복지 및 장점\n\n채점기준:\n- 사실성 정확성 (25점)\n- 구체성 명료성 (25점)\n- 논리성 (25점)\n- 필수요소 충족 (15점)\n- 분량 + 형식 준수 (10점)",
     },
     B: {
-      title: "글쓰기 문제",
+      title: "글쓰기 문제 (W2)",
       description: "다음 주제에 대해 250자 내외로 논리적으로 서술하세요.",
       content:
-        "KAIST 메일로 보낼 'KAIST 셔틀 지연 대응 공지' 관련 행정 공지문을 250자 내외로 작성하시오.\n\n반드시 포함:\n1. 'N1_Library 9–10시 평균 지연값'을 정확 인용\n2. 구체적 시간의 데이터 결측(장비 재부팅) 사실 언급\n3. 혼잡 대응 안내 1–2가지",
+        'W2: KAIST에서 한 가장 의미있는 경험 1문단을 250자 내외로 작성하시오.\n\n반드시 포함:\n1. 언제, 무엇을, 어떻게?\n2. 왜 가장 의미있었는지\n3. 무엇을 배웠는지, 미래에 어떻게 도움이 될 것 같은지\n\n형식 제한: 구체 명사, 동사 사용 (모호어 금지: "열심히", "최선")\n\n채점기준:\n- 사실성 정확성 (25점)\n- 구체성 명료성 (25점)\n- 논리성 (25점)\n- 필수요소 충족 (15점)\n- 분량 + 형식 준수 (10점)',
     },
   },
 };
@@ -191,9 +165,9 @@ function TaskPerformContent() {
 
     const config = getTaskConfig(id, taskNumber);
 
-    // 수학 문제인 경우, 랜덤으로 선택된 2개 문제를 할당
+    // 수학 문제인 경우, M1과 M2를 순서대로 할당
     if (config.group === "수학") {
-      const [problem1, problem2] = selectMathProblems(id);
+      const [problem1, problem2] = selectMathProblems();
       PROBLEMS.수학.A.content = problem1.content;
       PROBLEMS.수학.B.content = problem2.content;
     }
@@ -282,37 +256,14 @@ function TaskPerformContent() {
           <div className="mb-6 p-6 bg-surface rounded-lg">
             <p className="text-lg whitespace-pre-line">{problem.content}</p>
 
-            {/* M1 문제일 때 데이터 파일 다운로드 버튼 표시 */}
-            {taskConfig.group === "수학" &&
-              (PROBLEMS.수학.A.content.includes(
-                "KAIST 학생 일주일 지출 모델링"
-              ) ||
-                PROBLEMS.수학.B.content.includes(
-                  "KAIST 학생 일주일 지출 모델링"
-                )) &&
-              problem.content.includes("KAIST 학생 일주일 지출 모델링") && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <a
-                    href="/data/kaist_spending.csv"
-                    download="kaist_spending.csv"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    데이터 파일 다운로드 (kaist_spending.csv)
-                  </a>
-                </div>
-              )}
+            {/* 채점기준 표시 */}
+            {taskConfig.group === "수학" && "grading" in problem && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <p className="text-sm text-text-secondary whitespace-pre-line">
+                  {problem.grading}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* 답안 입력 */}

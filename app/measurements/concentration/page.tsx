@@ -195,11 +195,11 @@ function ConcentrationContent() {
 
       // 다음 단계로 이동
       if (measurementPoint === "pre") {
+        // 사전 측정: 설문조사 없이 바로 Task 1으로
         router.push("/task/intro?task=1");
-      } else if (measurementPoint === "mid") {
-        router.push("/task/intro?task=2");
-      } else if (measurementPoint === "post") {
-        router.push("/completion");
+      } else {
+        // 중간/사후 측정: 설문조사 후 다음 단계로
+        router.push(`/measurements/survey?point=${measurementPoint}`);
       }
     } catch (error) {
       console.error("Error saving CPT data:", error);
@@ -253,8 +253,10 @@ function ConcentrationContent() {
                     <ol className="list-decimal list-inside space-y-1 ml-2">
                       <li>화면에 숫자나 알파벳이 빠르게 나타납니다</li>
                       <li>
-                        <strong>타겟 자극({test.targets.join(", ")})</strong>이
-                        나타나면 <strong>스페이스바</strong> 또는{" "}
+                        <strong className="text-primary">
+                          위에 표시된 타겟 자극
+                        </strong>
+                        이 나타나면 <strong>스페이스바</strong> 또는{" "}
                         <strong>화면 클릭</strong>으로 반응하세요
                       </li>
                       <li>다른 자극에는 반응하지 마세요</li>
@@ -262,15 +264,25 @@ function ConcentrationContent() {
                     </ol>
                   </div>
 
+                  <div className="border-t border-border pt-3 mt-3 bg-warning-light/20 p-3 rounded">
+                    <p className="font-semibold mb-2 text-warning">
+                      ⚠️ 중요: 타겟 자극을 꼭 기억하세요!
+                    </p>
+                    <p className="text-sm">
+                      테스트가 시작되면 타겟 정보가 사라집니다.
+                      <br />
+                      <strong className="text-primary text-lg">
+                        {test.targets.join(", ")}
+                      </strong>{" "}
+                      ← 이 자극들을 기억해주세요.
+                    </p>
+                  </div>
+
                   <div className="border-t border-border pt-3 mt-3">
-                    <p className="font-semibold mb-2">⚠️ 주의사항:</p>
+                    <p className="font-semibold mb-2">📌 주의사항:</p>
                     <ul className="list-disc list-inside space-y-1 ml-2">
                       <li>테스트 중에는 페이지를 벗어나지 마세요</li>
                       <li>최대한 집중하여 진행해주세요</li>
-                      <li>
-                        타겟 자극을 잘 기억하세요:{" "}
-                        <strong>{test.targets.join(", ")}</strong>
-                      </li>
                     </ul>
                   </div>
                 </div>
@@ -298,22 +310,6 @@ function ConcentrationContent() {
                       }%`,
                     }}
                   />
-                </div>
-              </div>
-
-              <div className="mb-8 text-center">
-                <div className="text-sm text-text-secondary mb-2">
-                  타겟 자극 (반응하세요)
-                </div>
-                <div className="flex gap-4 justify-center">
-                  {test.targets.map((target) => (
-                    <div
-                      key={target}
-                      className="px-6 py-3 bg-primary text-white rounded-lg font-bold text-2xl"
-                    >
-                      {target}
-                    </div>
-                  ))}
                 </div>
               </div>
 

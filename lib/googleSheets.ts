@@ -268,3 +268,30 @@ export async function saveTaskData(data: {
 
   await appendToSheet("task_data", [row]);
 }
+
+/**
+ * Survey 데이터를 저장합니다
+ */
+export async function saveSurveyData(data: {
+  participantId: string;
+  measurementPoint: string;
+  q1_cognitive_effort: number;
+  q2_concentration: number;
+  q3_idea_fluency: number;
+  q4_idea_originality: number;
+  q5_satisfaction: number;
+  timestamp: string;
+}) {
+  const row = [
+    data.participantId,
+    data.measurementPoint,
+    data.q1_cognitive_effort,
+    data.q2_concentration,
+    data.q3_idea_fluency,
+    data.q4_idea_originality,
+    data.q5_satisfaction,
+    data.timestamp,
+  ];
+
+  await appendToSheet("survey_data", [row]);
+}
