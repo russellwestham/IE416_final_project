@@ -238,7 +238,7 @@ function ConcentrationContent() {
                   </p>
 
                   <p>
-                    <strong>⏱️ 소요 시간:</strong> 약 1분 (80개 자극)
+                    <strong>⏱️ 소요 시간:</strong> 약 1분
                   </p>
 
                   <p>

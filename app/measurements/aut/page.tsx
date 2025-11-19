@@ -174,7 +174,12 @@ function AUTContent() {
             <li>
               제시된 물건의 독창적이고 다양한 용도를 최대한 많이 적어주세요
             </li>
-            <li>한 줄에 하나씩, 간단명료하게 작성해주세요</li>
+            <li className="font-semibold text-primary">
+              ⚠️ 중요: 한 줄에 하나의 용도만 작성해주세요 (Enter로 줄바꿈)
+            </li>
+            <li>
+              띄어쓰기로 여러 용도를 나열하면 1개로 인식됩니다
+            </li>
             <li>일반적인 용도보다 창의적인 용도를 생각해보세요</li>
             <li>제한 시간: 2분</li>
           </ul>
@@ -186,11 +191,17 @@ function AUTContent() {
             className="input-field min-h-[300px] font-mono"
             value={response}
             onChange={(e) => setResponse(e.target.value)}
+            placeholder="예시:&#10;망치로 사용&#10;책받침으로 사용&#10;문진으로 사용&#10;(한 줄에 하나씩 작성)"
             disabled={timeLeft === 0}
           />
           <p className="text-sm text-text-secondary mt-2">
-            작성한 용도 수:{" "}
-            {response.split("\n").filter((line) => line.trim()).length}개
+            💡 작성한 용도 수:{" "}
+            <span className="font-semibold text-primary">
+              {response.split("\n").filter((line) => line.trim()).length}개
+            </span>
+            <span className="text-xs ml-2">
+              (줄바꿈으로 구분됩니다)
+            </span>
           </p>
         </div>
 
