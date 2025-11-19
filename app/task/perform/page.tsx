@@ -132,9 +132,9 @@ function TaskPerformContent() {
 
         // 다음 단계로 이동
         if (taskNumber === 1) {
-          router.push("/measurements/aut?point=mid&round=1");
+          router.push("/measurements/survey?point=mid");
         } else {
-          router.push("/measurements/aut?point=post&round=1");
+          router.push("/measurements/survey?point=post");
         }
       } catch (error) {
         console.error("Error saving task data:", error);

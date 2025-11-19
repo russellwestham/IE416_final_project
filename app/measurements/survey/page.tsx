@@ -65,14 +65,12 @@ function SurveyContent() {
         }),
       });
 
-      // 다음 단계로 이동
-      if (measurementPoint === "pre") {
-        router.push("/task/intro?task=1");
-      } else if (measurementPoint === "mid") {
-        router.push("/task/intro?task=2");
+      // 다음 단계로 이동: AUT로
+      if (measurementPoint === "mid") {
+        router.push("/measurements/aut?point=mid&round=1");
       } else {
         // post
-        router.push("/completion");
+        router.push("/measurements/aut?point=post&round=1");
       }
     } catch (error) {
       console.error("Error saving survey data:", error);

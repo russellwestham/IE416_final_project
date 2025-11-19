@@ -195,11 +195,14 @@ function ConcentrationContent() {
 
       // 다음 단계로 이동
       if (measurementPoint === "pre") {
-        // 사전 측정: 설문조사 없이 바로 Task 1으로
+        // 사전 측정: Task 1으로
         router.push("/task/intro?task=1");
+      } else if (measurementPoint === "mid") {
+        // 중간 측정: Task 2로
+        router.push("/task/intro?task=2");
       } else {
-        // 중간/사후 측정: 설문조사 후 다음 단계로
-        router.push(`/measurements/survey?point=${measurementPoint}`);
+        // 사후 측정: 완료 페이지로
+        router.push("/completion");
       }
     } catch (error) {
       console.error("Error saving CPT data:", error);
