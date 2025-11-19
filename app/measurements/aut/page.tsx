@@ -7,12 +7,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 const AUT_OBJECTS: {
   [key: number]: { pre: string; mid: string; post: string };
 } = {
-  1: { pre: "벽돌", mid: "클립", post: "종이컵" },
-  2: { pre: "벽돌", mid: "종이컵", post: "클립" },
-  3: { pre: "클립", mid: "벽돌", post: "종이컵" },
-  4: { pre: "클립", mid: "종이컵", post: "벽돌" },
-  5: { pre: "종이컵", mid: "벽돌", post: "클립" },
-  6: { pre: "종이컵", mid: "클립", post: "벽돌" },
+  1: { pre: "500ml 페트병", mid: "클립", post: "종이컵" },
+  2: { pre: "500ml 페트병", mid: "종이컵", post: "클립" },
+  3: { pre: "클립", mid: "500ml 페트병", post: "종이컵" },
+  4: { pre: "클립", mid: "종이컵", post: "500ml 페트병" },
+  5: { pre: "종이컵", mid: "500ml 페트병", post: "클립" },
+  6: { pre: "종이컵", mid: "클립", post: "500ml 페트병" },
 };
 
 function AUTContent() {

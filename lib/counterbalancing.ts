@@ -4,7 +4,7 @@
  */
 
 // AUT 물건 목록
-const AUT_OBJECT_LIST = ["벽돌", "클립", "종이컵"];
+const AUT_OBJECT_LIST = ["500ml 페트병", "클립", "종이컵"];
 
 /**
  * 시드 기반 랜덤 함수 (Fisher-Yates shuffle)
