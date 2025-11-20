@@ -168,11 +168,13 @@ function SurveyContent() {
           {/* 질문 3: 아이디어 유창성 */}
           <div className="p-6 bg-surface rounded-lg">
             <h3 className="font-semibold text-lg mb-4 text-center">
-              Q3. 문제를 해결하거나 글을 쓸 때, 아이디어가 막힘없이 나의 주도로 술술 풀렸나요?
+              Q3. 문제를 해결하거나 글을 쓸 때, 아이디어가 막힘없이 나의 주도로
+              술술 풀렸나요?
             </h3>
             <div className="flex items-center justify-center gap-4">
               <span className="text-sm text-text-secondary min-w-[140px] text-center">
-                아이디어가 떠오르지 않아 막막했거나, 외부(AI 등)가 주는 답에 의존하여 생각할 필요가 없었다.
+                아이디어가 떠오르지 않아 막막했거나, 외부(AI 등)가 주는 답에
+                의존하여 생각할 필요가 없었다.
               </span>
               <div className="flex gap-3">
                 {[1, 2, 3, 4, 5, 6, 7].map((value) => (
