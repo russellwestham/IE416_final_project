@@ -13,7 +13,7 @@ const AUT_OBJECT_LIST = ["500ml 페트병", "클립", "종이컵"];
 function seededShuffle<T>(array: T[], seed: number): T[] {
   const result = [...array];
   let currentSeed = seed;
-  
+
   // 간단한 LCG (Linear Congruential Generator)
   const random = () => {
     currentSeed = (currentSeed * 1664525 + 1013904223) % 4294967296;
@@ -25,7 +25,7 @@ function seededShuffle<T>(array: T[], seed: number): T[] {
     const j = Math.floor(random() * (i + 1));
     [result[i], result[j]] = [result[j], result[i]];
   }
-  
+
   return result;
 }
 
@@ -41,7 +41,7 @@ function generateAUTObjectOrder(participantId: string): {
   // 참가자 ID를 숫자로 변환하여 시드로 사용
   const seed = parseInt(participantId.replace("P", "")) || 1;
   const shuffled = seededShuffle(AUT_OBJECT_LIST, seed);
-  
+
   return {
     pre: shuffled[0],
     mid: shuffled[1],
